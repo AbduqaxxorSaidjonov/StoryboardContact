@@ -7,11 +7,13 @@
 
 import UIKit
 
-class EditViewController: BaseViewController {
+class EditViewController: BaseViewController, EditView {
+   
     @IBOutlet weak var nameTextField: UITextField!
     @IBOutlet weak var phoneTextField: UITextField!
     @IBOutlet weak var buttonEdit: UIButton!
     var ContactId: String = "1"
+    var presenter: EditPresenter!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,7 +23,10 @@ class EditViewController: BaseViewController {
     func initViews(){
         buttonEdit.layer.cornerRadius = 15
         initNavigation()
-        apiSingleContact(contactId: ContactId)
+        presenter?.apiSingleContact(contactId: ContactId)
+        presenter = EditPresenter()
+        presenter.editView = self
+        presenter.controller = self
     }
     
     func initNavigation(){
@@ -31,7 +36,7 @@ class EditViewController: BaseViewController {
     }
     
     @IBAction func editButton(_ sender: Any) {
-        apiContactEdit(contactId: ContactId)
+        presenter?.apiContactEdit(contactId: ContactId, contact: Contact(name: nameTextField.text!, phone: phoneTextField.text!))
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "edit"), object: nil)
     }
     
@@ -39,32 +44,20 @@ class EditViewController: BaseViewController {
         dismiss(animated: true, completion: nil)
     }
     
-    func apiSingleContact(contactId: String){
-        showProgress()
-        AFHttp.get(url: AFHttp.API_CONTACT_SINGLE + contactId, params: AFHttp.paramsEmpty(), handler: { response in
-            self.hideProgress()
-            switch response.result {
-            case .success:
-                print(response.result)
-                let contact = try! JSONDecoder().decode(Contact.self, from: response.data!)
-                self.nameTextField.text = contact.name
-                self.phoneTextField.text = contact.phone
-            case let .failure(error):
-                print(error)
-            }
-        })
+    func onLoadContact(contact: Contact){
+        if contact != nil{
+            self.nameTextField.text = contact.name
+            self.phoneTextField.text = contact.phone
+        }else{
+            //error
+        }
     }
     
-    func apiContactEdit(contactId: String){
-        showProgress()
-        AFHttp.put(url: AFHttp.API_CONTACT_UPDATE + contactId, params: AFHttp.paramsPostUpdate(contact: Contact(name: nameTextField.text!, phone: phoneTextField.text!)), handler: {response in
-            switch response.result{
-            case .success:
-                print(response.result)
-                self.dismiss(animated: true,completion: nil)
-            case let .failure(error):
-                print(error)
-            }
-        })
+    func onEdited(edited: Bool) {
+        if edited{
+            self.dismiss(animated: true,completion: nil)
+        }else{
+            //error
+        }
     }
 }
