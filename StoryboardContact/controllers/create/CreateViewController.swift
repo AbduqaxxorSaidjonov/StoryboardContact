@@ -7,12 +7,14 @@
 
 import UIKit
 
-class CreateViewController: BaseViewController {
-
+class CreateViewController: BaseViewController, CreateView {
+    
     @IBOutlet weak var nameTextField: UITextField!
     @IBOutlet weak var phoneTextField: UITextField!
+    var presenter: CreatePresenterProtocol!
+    
     @IBAction func addButton(_ sender: Any) {
-        apiPostCreate()
+        presenter.apiPostCreate(contact: Contact(name: nameTextField.text!, phone: phoneTextField.text!))
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "load"), object: nil)
     }
     @IBOutlet weak var button1: UIButton!
@@ -26,6 +28,9 @@ class CreateViewController: BaseViewController {
     func initViews(){
         initNavigation()
         button1.layer.cornerRadius = 15
+        presenter = CreatePresenterProtocol()
+        presenter.createView = self
+        presenter.controller = self
     }
     
     func initNavigation(){
@@ -39,17 +44,13 @@ class CreateViewController: BaseViewController {
         navigationController?.popViewController(animated: true)
     }
     
-    func apiPostCreate(){
-        showProgress()
-        AFHttp.post(url: AFHttp.API_CONTACT_CREATE, params: AFHttp.paramsContactCreate(contact: Contact(name: nameTextField.text!, phone: phoneTextField.text!)), handler: {response in
-            self.hideProgress()
-            switch response.result{
-            case .success:
-                print(response.result)
-                self.navigationController?.popViewController(animated: true)
-            case let .failure(error):
-                print(error)
-            }
-        })
+    func onCreated(created: Bool) {
+        if created{
+            self.navigationController?.popViewController(animated: true)
+        }else{
+            //error
+        }
+        
     }
+    
 }
