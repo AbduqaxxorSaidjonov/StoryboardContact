@@ -7,12 +7,12 @@
 
 import UIKit
 
-class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewDataSource {
+class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewDataSource, HomeView {
     
-
     @IBOutlet weak var tableView: UITableView!
     var items : Array<Contact> = Array()
-
+    var presenter: HomePresenter!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         initViews()
@@ -22,8 +22,11 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
     func initViews(){
         tableView.dataSource = self
         tableView.delegate = self
+        presenter = HomePresenter()
+        presenter.homeView = self
+        presenter.controller = self
         initNavigation()
-        apiContactList()
+        presenter.apiContactList()
         refreshView()
     }
 
@@ -48,33 +51,7 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
         self.present(navigationController, animated: true, completion: nil)
     }
     
-    func apiContactList(){
-        showProgress()
-        AFHttp.get(url: AFHttp.API_CONTACT_LIST, params: AFHttp.paramsEmpty(), handler: {response in
-            self.hideProgress()
-            switch response.result{
-            case .success:
-                let contacts = try! JSONDecoder().decode([Contact].self, from: response.data!)
-                self.refreshTableView(contacts: contacts)
-            case let .failure(error):
-                print(error)
-            }
-        })
-    }
-    
-    func apiContactDelete(contact: Contact){
-        showProgress()
-        AFHttp.del(url: AFHttp.API_CONTACT_DELETE + contact.id!, params: AFHttp.paramsEmpty(), handler: { response in
-            self.hideProgress()
-            switch response.result{
-            case .success:
-                print(response.result)
-                self.apiContactList()
-            case let .failure(error):
-                print(error)
-            }
-        })
-    }
+   
     
     func refreshView(){
         NotificationCenter.default.addObserver(self, selector: #selector(doThisWhenNotifyLoad(notification: )), name: NSNotification.Name(rawValue: "load"), object: nil)
@@ -85,7 +62,7 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
     // MARK: - Action
     
     @objc func leftTapped(){
-        apiContactList()
+        presenter.apiContactList()
     }
     
     @objc func rightTapped(){
@@ -94,12 +71,12 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
     
     @objc func doThisWhenNotifyLoad(notification : NSNotification) {
             //update tableview
-        apiContactList()
+        presenter.apiContactList()
     }
     
     @objc func doThisWhenNotifyEdit(notification : NSNotification) {
             //update tableview
-        apiContactList()
+        presenter.apiContactList()
     }
     
     // MARK: - Table View
@@ -136,7 +113,7 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
         return UIContextualAction(style: .destructive, title: "Delete"){ (action, swipeButtonView, completion) in
             print("Delete Here")
             completion(true)
-            self.apiContactDelete(contact: contact)
+            self.presenter.apiContactDelete(contact: contact)
         }
     }
     
@@ -147,4 +124,21 @@ class HomeViewController: BaseViewController, UITableViewDelegate,  UITableViewD
             self.callEditViewController(contactId: contact.id!)
         }
     }
+    
+    func onLoadContacts(contacts: [Contact]) {
+        if contacts.count > 0{
+            refreshTableView(contacts: contacts)
+        }else{
+            //error
+        }
+    }
+    
+    func onContactDelete(status: Bool) {
+        if status{
+            presenter.apiContactList()
+        }else{
+            //error
+        }
+    }
+    
 }
